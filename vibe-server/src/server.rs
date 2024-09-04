@@ -10,7 +10,7 @@ use eyre::{Result, eyre};
 
 #[derive(Deserialize, Default)]
 pub struct TranscribeModuleOptions {
-    pub core_options: Option<TranscribeOptions>,
+    pub core_options: TranscribeOptions,
     #[serde(default)]
     pub diarize: Option<bool>,
     pub max_speakers: Option<usize>,
@@ -48,7 +48,7 @@ pub struct Segment {
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct TranscribeModuleOptions {
     #[serde(flatten)]
-    pub core_options: vibe_core::config::TranscribeOptions,
+    pub core_options: TranscribeOptions,
     pub diarize: Option<bool>,
     pub max_speakers: Option<usize>,
     pub speaker_recognition_threshold: Option<f32>,
@@ -96,7 +96,7 @@ pub async fn transcribe(
         diarize: context.transcribe_config.diarize,
         max_speakers: context.transcribe_config.max_speakers,
         speaker_recognition_threshold: context.transcribe_config.speaker_recognition_threshold,
-        vad_filter: context.transcribe_config.vad_filter,
+        vad_filter: Some(context.transcribe_config.vad_filter),
         vad_parameters: context.transcribe_config.vad_parameters.clone(),
     };
 
@@ -271,21 +271,21 @@ async fn perform_transcription(
     let ctx = whisper_context.as_ref().ok_or_else(|| eyre!("Whisper context not initialized"))?;
 
     // If the context is not initialized with the correct model, initialize it
-    if ctx.model_path() != model_path {
+    if ctx.model_path().unwrap_or_default() != model_path {
         *whisper_context = Some(transcribe::create_context(&model_path, None)?);
     }
 
     // Override module options with task-specific options if provided
-    if let Some(lang) = task_options.core_options.lang {
+    if let Some(lang) = task_options.core_options.lang.clone() {
         module_options.core_options.lang = Some(lang);
     }
-    if let Some(init_prompt) = task_options.core_options.init_prompt {
+    if let Some(init_prompt) = task_options.core_options.init_prompt.clone() {
         module_options.core_options.init_prompt = Some(init_prompt);
     }
     // ... (apply other overrides as needed)
 
     // Set the file path in the core options
-    module_options.core_options.path = file_path.to_str().unwrap().to_string();
+    module_options.core_options.path = file_path.to_str().unwrap_or_default().to_string();
 
     let progress_callback = move |progress: i32| {
         let _ = progress_tx.try_send(progress as f32 / 100.0);

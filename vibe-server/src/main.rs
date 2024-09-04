@@ -1,35 +1,39 @@
 use axum::{
     routing::{get, post},
     Router,
-    Server,
-    Router,
 };
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
+use std::path::{Path, PathBuf};  // Add PathBuf here
 use tower_http::cors::CorsLayer;
-use std::path::Path;
+use std::env;
 
 mod server;
 mod config;
 mod setup;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> eyre::Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
+    // Get config file path from command line argument or use default
+    let args: Vec<String> = env::args().collect();
+    let config_path = args.get(1).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("config.toml"));
+
     // Load configuration
-    let config = config::load_config().expect("Failed to load configuration");
+    let config = config::load_config(&config_path).expect("Failed to load configuration");
 
     // Check if model directory exists
     let model_dir = Path::new(&config.models.model_directory);
     if !model_dir.exists() || !model_dir.is_dir() {
-        return Err(format!("Model directory does not exist: {:?}", model_dir).into());
+        return Err(eyre::eyre!("Model directory does not exist: {:?}", model_dir));
     }
 
     // Check if default model file exists
     let default_model_file = model_dir.join(&config.models.mappings[&config.models.default_model]);
     if !default_model_file.exists() || !default_model_file.is_file() {
-        return Err(format!("Default model file does not exist: {:?}", default_model_file).into());
+        return Err(eyre::eyre!("Default model file does not exist: {:?}", default_model_file));
     }
 
     // Initialize the model context
@@ -47,12 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(model_context);
 
     // Run our application
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
-    tracing::info!("listening on {}", addr);
-    Server::bind(&addr)
-    axum::serve(app.into_make_service(), addr)
-        .await
-        .map_err(|e| e.into())
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let listener = TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

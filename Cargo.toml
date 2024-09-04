@@ -1,13 +1,9 @@
 [workspace]
-members = [
-    "vibe-server",
-    "core",
-] 
+members = ["vibe-server", "core"]
 resolver = "2"
 
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
-
 [workspace.dependencies]
-eyre = "0.6.12"
+eyre = { git = "https://github.com/thewh1teagle/eyre", branch = "feat/report-serialize-backtrace", features = [
+	"serialize",
+] }
+serde_json = "1.0.111"

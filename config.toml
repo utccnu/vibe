@@ -1,1 +1,59 @@
+# Server port configuration
 port = 3000
+
+# Model configuration
+[models]
+model_directory = "/Users/liuwen/Library/Application Support/github.com.thewh1teagle.vibe" # Directory where model files are stored
+# Default model to use if not specified in the request
+default_model = "Medium"
+
+# Model mappings (name to filename)
+[models.mappings]
+"Medium" = "ggml-medium.bin"
+"Tiny-en" = "ggml-tiny-en-98232.bin"
+"Large" = "ggml-large.bin"
+
+
+# Transcribe module configuration
+[transcribe_module]
+# Language for transcription (empty string for auto-detection)
+language = ""
+# Initial prompt to guide the transcription
+initial_prompt = ""
+# Whether to translate the transcription to English
+translate = false
+# Whether to include timestamps for each word
+word_timestamps = false
+# Maximum text context length for transcription
+max_text_ctx = 16384
+# Maximum sentence length (0 for no limit)
+max_sentence_len = 0
+# Number of threads to use for transcription
+n_threads = 4
+# Temperature for sampling (higher values make output more random)
+temperature = 0.0
+# Whether to automatically detect the language
+detect_language = true
+# Whether to perform speaker diarization
+diarize = false
+# Maximum number of speakers to detect in diarization
+max_speakers = 2
+# Beam size for beam search decoding
+beam_size = 5
+# Number of best candidates to consider
+best_of = 5
+# Threshold for speaker recognition in diarization
+speaker_recognition_threshold = 0.5
+# Whether to apply Voice Activity Detection (VAD) filtering
+vad_filter = false
+
+# VAD (Voice Activity Detection) parameters
+[transcribe_module.vad_parameters]
+# Threshold for voice detection
+threshold = 0.5
+# Minimum duration of speech (in milliseconds)
+min_speech_duration_ms = 250
+# Minimum duration of silence (in milliseconds)
+min_silence_duration_ms = 100
+# Padding added to speech segments (in milliseconds)
+speech_pad_ms = 30

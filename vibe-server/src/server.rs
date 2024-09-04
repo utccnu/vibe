@@ -1,28 +1,41 @@
-use axum::{extract::State, response::Json, extract::{Multipart, Json}, response::IntoResponse};
+use axum::{extract::State, response::Json, extract::Multipart, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use crate::setup::ModelContext;
 use tokio::sync::mpsc;
-use std::{path::PathBuf, fs};
+use std::path::PathBuf;
 use uuid::Uuid;
 use vibe_core::{config::TranscribeOptions, transcribe};
-use crate::config::{VADParameters, TranscribeModuleConfig};
+use crate::config::VadParameters;
 use eyre::{Result, eyre};
 
-#[derive(Deserialize, Default)]
-pub struct TranscribeModuleOptions {
-    pub core_options: Option<TranscribeOptions>,
-    #[serde(default)]
-    pub diarize: Option<bool>,
-    pub max_speakers: Option<usize>,
-    pub speaker_recognition_threshold: Option<f32>,
-    pub vad_filter: Option<bool>,
-    pub vad_parameters: Option<VADParameters>,
-}
-
+#[allow(dead_code)]
 #[derive(Deserialize, Default)]
 pub struct TranscribeRequest {
     #[serde(flatten)]
     pub module_options: TranscribeModuleOptions,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct TranscribeModuleOptions {
+    pub core_options: Option<TranscribeOptions>,
+    pub diarize: Option<bool>,
+    pub max_speakers: Option<usize>,
+    pub speaker_recognition_threshold: Option<f32>,
+    pub vad_filter: Option<bool>,
+    pub vad_parameters: Option<VadParameters>,
+}
+
+impl Default for TranscribeModuleOptions {
+    fn default() -> Self {
+        Self {
+            core_options: None,
+            diarize: None,
+            max_speakers: None,
+            speaker_recognition_threshold: None,
+            vad_filter: None,
+            vad_parameters: None,
+        }
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -45,30 +58,6 @@ pub struct Segment {
     speaker: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TranscribeModuleOptions {
-    #[serde(flatten)]
-    pub core_options: Option<TranscribeOptions>,
-    pub diarize: Option<bool>,
-    pub max_speakers: Option<usize>,
-    pub speaker_recognition_threshold: Option<f32>,
-    pub vad_filter: Option<bool>,
-    pub vad_parameters: VADParameters,
-}
-
-impl Default for TranscribeModuleOptions {
-    fn default() -> Self {
-        Self {
-            core_options: None,
-            diarize: Some(false),
-            max_speakers: Some(2),
-            speaker_recognition_threshold: Some(0.5),
-            vad_filter: Some(false),
-            vad_parameters: VADParameters::default(),
-        }
-    }
-}
-
 /// API endpoint for initiating a transcription job
 pub async fn transcribe(
     State(context): State<ModelContext>,
@@ -76,28 +65,29 @@ pub async fn transcribe(
 ) -> impl IntoResponse {
     // Generate a unique job ID for this transcription task
     let job_id = Uuid::new_v4().to_string();
+    let job_id_for_task = job_id.clone();
 
     let mut file_path = None;
     let mut task_options = None;
     // Initialize module options with values from the config file
     let mut module_options = TranscribeModuleOptions {
-        core_options: TranscribeOptions {
+        core_options: Some(TranscribeOptions {
             path: "".to_string(), // This will be set later
             lang: context.transcribe_config.language.clone(),
             init_prompt: context.transcribe_config.initial_prompt.clone(),
             translate: Some(context.transcribe_config.translate),
             word_timestamps: Some(context.transcribe_config.word_timestamps),
-            max_text_ctx: context.transcribe_config.max_text_ctx,
-            max_sentence_len: context.transcribe_config.max_sentence_len,
-            n_threads: context.transcribe_config.n_threads,
+            max_text_ctx: context.transcribe_config.max_text_ctx.map(|n| n as i32),
+            max_sentence_len: context.transcribe_config.max_sentence_len.map(|n| n as i32),
+            n_threads: context.transcribe_config.n_threads.map(|n| n as i32),
             temperature: context.transcribe_config.temperature,
-            ..Default::default()
-        },
-        diarize: context.transcribe_config.diarize,
+            verbose: Some(false),
+        }),
+        diarize: Some(context.transcribe_config.diarize),
         max_speakers: context.transcribe_config.max_speakers,
         speaker_recognition_threshold: context.transcribe_config.speaker_recognition_threshold,
         vad_filter: Some(context.transcribe_config.vad_filter),
-        vad_parameters: context.transcribe_config.vad_parameters.clone(),
+        vad_parameters: Some(context.transcribe_config.vad_parameters.clone()),
     };
 
     let mut model_name = context.model_config.default_model.clone();
@@ -127,7 +117,7 @@ pub async fn transcribe(
     }
 
     let file_path = file_path.unwrap();
-    let task_options: TranscribeRequest = task_options.unwrap_or_default();
+    let task_options: TranscribeModuleOptions = task_options.unwrap_or_default();
 
     // Get the model path
     let model_path = match context.model_config.mappings.get(&model_name) {
@@ -152,10 +142,10 @@ pub async fn transcribe(
 
     // Spawn a new task to perform the transcription asynchronously
     tokio::spawn(async move {
-        let result = perform_transcription(file_path, model_path, task_options.module_options, module_options, tx, context_clone).await;
+        let result = perform_transcription(file_path, model_path, task_options, module_options, tx, context_clone).await;
         match result {
             Ok(transcription) => {
-                context.results.lock().await.insert(job_id.clone(), transcription);
+                context.results.lock().await.insert(job_id_for_task, transcription);
             }
             Err(e) => {
                 tracing::error!("Transcription error: {:?}", e);
@@ -267,25 +257,31 @@ async fn perform_transcription(
     progress_tx: mpsc::Sender<f32>,
     context: ModelContext,
 ) -> Result<TranscriptionResult> {
-    let whisper_context = context.whisper.lock().await;
+    let mut whisper_context = context.whisper.lock().await;
+    
+    // Check if the context is initialized with the correct model
+    let current_model_path = context.current_model_path.lock().await;
+    if current_model_path.as_ref() != Some(&model_path) {
+        drop(current_model_path); // Release the lock before modifying
+        *whisper_context = Some(transcribe::create_context(&model_path, None)?);
+        *context.current_model_path.lock().await = Some(model_path.clone());
+    }
+
     let ctx = whisper_context.as_ref().ok_or_else(|| eyre!("Whisper context not initialized"))?;
 
-    // If the context is not initialized with the correct model, initialize it
-    if ctx.model_path() != model_path {
-        *whisper_context = Some(transcribe::create_context(&model_path, None)?);
-    }
-
     // Override module options with task-specific options if provided
-    if let Some(lang) = task_options.core_options.lang.clone() {
-        module_options.core_options.lang = Some(lang);
+    if let Some(core_options) = &task_options.core_options {
+        if let Some(lang) = &core_options.lang {
+            module_options.core_options.as_mut().unwrap().lang = Some(lang.clone());
+        }
+        if let Some(init_prompt) = &core_options.init_prompt {
+            module_options.core_options.as_mut().unwrap().init_prompt = Some(init_prompt.clone());
+        }
+        // ... (apply other overrides as needed)
     }
-    if let Some(init_prompt) = task_options.core_options.init_prompt.clone() {
-        module_options.core_options.init_prompt = Some(init_prompt);
-    }
-    // ... (apply other overrides as needed)
 
     // Set the file path in the core options
-    module_options.core_options.path = file_path.to_str().unwrap_or_default().to_string();
+    module_options.core_options.as_mut().unwrap().path = file_path.to_str().unwrap_or_default().to_string();
 
     let progress_callback = move |progress: i32| {
         let _ = progress_tx.try_send(progress as f32 / 100.0);
@@ -296,7 +292,7 @@ async fn perform_transcription(
 
     let transcript = transcribe::transcribe(
         ctx,
-        &module_options.core_options,
+        module_options.core_options.as_ref().unwrap(),
         Some(Box::new(progress_callback)),
         None, // diarize_options
         None, // vad_options

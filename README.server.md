@@ -6,18 +6,21 @@ Vibe API Server is a spinoff of the Vibe desktop application, focusing on provid
 
 ## Features
 
--   support running as a standalone API server on macOS with silicon CPU(M1 series and above) and debian 12 (vulkan supported)
+-   Support for running as a standalone API server on macOS with silicon CPU (M1 series and above) and Debian 12 (Vulkan supported)
 -   RESTful API for audio/video transcription
 -   Support for multiple languages and speaker diarization
 -   File upload and remote file processing capabilities
 -   Swagger UI for easy API exploration and testing
 -   Configurable transcription options
+-   Multiple model support with dynamic loading
 
 ## API Endpoints
 
 1. `/transcribe` (POST): Transcribe uploaded audio/video files
 2. `/load` (POST): Load a specific transcription model
 3. `/list` (GET): List available transcription models
+4. `/transcription_status` (POST): Check the status of a transcription job
+5. `/transcription_result` (POST): Retrieve the result of a completed transcription job
 
 ## Getting Started
 
@@ -28,12 +31,20 @@ Vibe API Server is a spinoff of the Vibe desktop application, focusing on provid
 
 ### Installation
 
-> TBD
+1. Clone the repository
+2. Navigate to the `vibe-server` directory
+3. Run `cargo build --release`
 
 ## Configuration
 
 -   Server host and port can be configured in `config.toml`
--   Transcription models should be placed in the `models` directory
+-   Transcription models should be placed in the directory specified by `model_directory` in `config.toml`
+-   Model mappings and default model can be configured in the `[models]` section of `config.toml`
+-   The server will check at startup if the model directory and the default model file exist. It will not start if either is missing.
+
+### Model Configuration
+
+The `config.toml` file allows you to specify multiple models:
 
 ## Usage
 
@@ -48,6 +59,7 @@ Vibe API Server is a spinoff of the Vibe desktop application, focusing on provid
 -   always use wisely docstrings for later documentation and readability
 -   focus on providing production-ready code
 -   be careful with terminology, especially when it comes to audio/video processing and transcription
+-   check module or package dependencies at all times
 
 ### Remove desktop dependencies completely
 

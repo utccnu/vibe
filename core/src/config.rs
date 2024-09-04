@@ -2,7 +2,7 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Deserialize, Serialize, ToSchema, Clone, Default)]
+#[derive(Deserialize, Serialize, ToSchema, Clone)]
 pub struct TranscribeOptions {
     pub path: String,
     pub lang: Option<String>,

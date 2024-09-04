@@ -34,3 +34,7 @@ metal = ["vibe_core/metal"]
 openblas = ["vibe_core/openblas"]
 rocm = ["vibe_core/rocm"]
 vulkan = ["vibe_core/vulkan"]
+
+[[bin]]
+name = "vibe-server"
+path = "src/main_server.rs"

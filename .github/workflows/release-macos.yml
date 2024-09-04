@@ -48,3 +48,4 @@ jobs:
           args: '--target aarch64-apple-darwin'
           projectPath: ./desktop
           tauriScript: bunx tauri
+          includeUpdater: false

@@ -34,4 +34,8 @@
     ],
     "i18n-ally.pathMatcher": "{locale}/{namespace}.json",
     "i18n-ally.tabStyle": "tab",
+    "github-actions.workflows.pinned.workflows": [
+        ".github/workflows/release-macos.yml",
+        ".github/workflows/release-debian.yml"
+    ],
 }

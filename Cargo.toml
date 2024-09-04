@@ -7,10 +7,22 @@ license = "MIT"
 repository = "https://github.com/utccnu/vibe"
 edition = "2021"
 
+[workspace]
+members = [
+    "vibe-server",
+]
+
+[workspace.dependencies]
+serde_json = "1.0.114"
+eyre = "0.6.12"
+
+[package]
+name = "vibe"
+version = "0.1.0"
+edition = "2021"
+
 [dependencies]
-axum = "0.7.5"
-tower-http = { version = "0.5.0", features = ["cors"] }
-tokio = { version = "1.35.1", features = ["full"] }
+# Add any root-level dependencies here if needed
 serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.114"
 eyre = { workspace = true }

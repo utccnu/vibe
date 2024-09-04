@@ -13,7 +13,6 @@ default_model = "Medium"
 "Tiny-en" = "ggml-tiny-en-98232.bin"
 "Large" = "ggml-large.bin"
 
-
 # Transcribe module configuration
 [transcribe_module]
 # Language for transcription (empty string for auto-detection)
@@ -46,6 +45,15 @@ best_of = 5
 speaker_recognition_threshold = 0.5
 # Whether to apply Voice Activity Detection (VAD) filtering
 vad_filter = false
+
+# Filename to the segment model for diarization
+segment_model_filename = "segmentation-3.0.onnx"
+# Filename to the embedding model for diarization
+embedding_model_filename = "wespeaker_en_voxceleb_CAM++.onnx"
+# URL for downloading the embedding model
+embedding_model_url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_CAM++.onnx"
+# URL for downloading the segment model
+segment_model_url = "https://github.com/pengzhendong/pyannote-onnx/raw/master/pyannote_onnx/segmentation-3.0.onnx"
 
 # VAD (Voice Activity Detection) parameters
 [transcribe_module.vad_parameters]

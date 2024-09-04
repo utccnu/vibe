@@ -14,9 +14,9 @@ pub struct Config {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct ModelConfig {
-    pub model_directory: PathBuf,
-    pub mappings: HashMap<String, String>,
+    pub model_directory: String,
     pub default_model: String,
+    pub mappings: HashMap<String, String>,
 }
 
 #[allow(dead_code)]
@@ -38,6 +38,10 @@ pub struct TranscribeModuleConfig {
     pub speaker_recognition_threshold: Option<f32>,
     pub vad_filter: bool,
     pub vad_parameters: VadParameters,
+    pub segment_model_filename: String,
+    pub embedding_model_filename: String,
+    pub embedding_model_url: String,
+    pub segment_model_url: String,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]

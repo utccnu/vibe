@@ -2,6 +2,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use axum::extract::DefaultBodyLimit;  // Add this line
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use std::path::{Path, PathBuf};  // Add PathBuf here
@@ -48,6 +49,7 @@ async fn main() -> eyre::Result<()> {
         .route("/load", post(server::load))
         .route("/list", get(server::list_models))
         .layer(CorsLayer::permissive())
+		.layer(DefaultBodyLimit::max(1024 * 1024 * 100)) // Set to 100MB or adjust as needed
         .with_state(model_context);
 
     // Run our application

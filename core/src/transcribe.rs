@@ -160,7 +160,7 @@ pub fn transcribe(
 
     let st = std::time::Instant::now();
     if let Some(diarize_options) = diarize_options {
-        tracing::debug!("Diarize enabled {:?}", diarize_options);
+        tracing::info!("Diarization options: {:?}", diarize_options);
         params.set_single_segment(true);
 
         let diarize_segments =

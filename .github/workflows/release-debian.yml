@@ -14,13 +14,11 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    - platform: "macos-latest" # for Arm based macs (M1 and above).
-                      args: "--target aarch64-apple-darwin"
                     - platform: "debian-12"
                       args: '--features "vulkan"'
                       pre-build-args: "--vulkan"
 
-        runs-on: ${{ matrix.platform }}
+        runs-on: ubuntu-22.04
         steps:
             - uses: actions/checkout@v4
 

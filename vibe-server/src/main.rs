@@ -2,6 +2,7 @@ use axum::{
     routing::{get, post},
     Router,
     Server,
+    Router,
 };
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
@@ -49,8 +50,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
     tracing::info!("listening on {}", addr);
     Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    axum::serve(app.into_make_service(), addr)
+        .await
+        .map_err(|e| e.into())
 
     Ok(())
 }

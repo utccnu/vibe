@@ -20,6 +20,7 @@ use eyre::{Result, eyre};
 pub struct TranscribeRequest {
     #[serde(flatten)]
     pub core_options: TranscribeOptions,
+    #[serde(default)]
     // Additional options specific to vibe-server
     pub diarize: Option<bool>,
     pub max_speakers: Option<usize>,
@@ -129,7 +130,7 @@ pub async fn transcribe(
     }
 
     let file_path = file_path.unwrap();
-    let task_options: TranscribeRequest = task_options.unwrap_or_default();
+    let task_options: TranscribeRequest = task_options.unwrap_or(TranscribeRequest::default());
 
     // Get the model path
     let model_path = match context.model_config.mappings.get(&model_name) {
@@ -167,10 +168,7 @@ pub async fn transcribe(
     });
 
     // Return the job ID and status to the client
-    Json(TranscriptionResponse {
-        job_id,
-        status: "processing".to_string(),
-    })
+    Json(serde_json::json!({"job_id": job_id, "status": "processing"}))
 }
 
 /// API endpoint for checking the status of a transcription job

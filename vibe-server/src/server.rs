@@ -1,8 +1,10 @@
 use axum::{
+    extract::{State, Multipart},
+    response::Json,
     extract::{State, Multipart, Json},
     response::IntoResponse,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::setup::ModelContext;
 use tokio::sync::mpsc;
 use std::path::PathBuf;
@@ -49,7 +51,7 @@ pub struct Segment {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TranscribeModuleOptions {
     #[serde(flatten)]
-    pub core_options: TranscribeOptions,
+    pub core_options: vibe_core::config::TranscribeOptions,
     pub diarize: bool,
     pub max_speakers: Option<usize>,
     pub speaker_recognition_threshold: Option<f32>,
@@ -60,7 +62,7 @@ pub struct TranscribeModuleOptions {
 impl Default for TranscribeModuleOptions {
     fn default() -> Self {
         Self {
-            core_options: TranscribeOptions::default(),
+            core_options: vibe_core::config::TranscribeOptions::default(),
             diarize: false,
             max_speakers: Some(2),
             speaker_recognition_threshold: Some(0.5),
@@ -274,7 +276,7 @@ async fn perform_transcription(
     let ctx = whisper_context.as_ref().ok_or_else(|| eyre!("Whisper context not initialized"))?;
 
     // If the context is not initialized with the correct model, initialize it
-    if ctx.model_path() != model_path {
+    if ctx.model_path().unwrap_or_default() != model_path {
         *whisper_context = Some(transcribe::create_context(&model_path, None)?);
     }
 

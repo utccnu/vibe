@@ -5,7 +5,7 @@ description = "Vibe API Server"
 authors = ["@thewh1teagle"]
 license = "MIT"
 repository = "https://github.com/utccnu/vibe"
-edition.workspace = true
+edition = "2021"
 
 
 [dependencies]

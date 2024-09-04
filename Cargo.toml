@@ -1,13 +1,9 @@
 [workspace]
 members = [
     "vibe-server",
-]
-
-[workspace]
+] 
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-[target.'cfg(target_os = "linux")'.dependencies]
-openssl = { version = "0.10.63", features = ["vendored"] }

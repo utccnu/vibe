@@ -1,6 +1,6 @@
 [package]
 name = "vibe-server"
-version.workspace = true
+version = "0.1.0"
 description = "Vibe API Server"
 authors = ["@thewh1teagle"]
 license = "MIT"

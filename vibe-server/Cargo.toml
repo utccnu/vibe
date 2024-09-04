@@ -1,0 +1,36 @@
+[package]
+name = "vibe-server"
+version = "0.1.0"
+description = "Vibe API Server"
+authors = ["@thewh1teagle"]
+license = "MIT"
+repository = "https://github.com/utccnu/vibe"
+edition = "2021"
+
+[dependencies]
+axum = "0.7.5"
+tower-http = { version = "0.5.0", features = ["cors"] }
+tokio = { version = "1.35.1", features = ["full"] }
+serde = { version = "1.0.198", features = ["derive"] }
+serde_json = { workspace = true }
+eyre = { workspace = true }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+utoipa = { version = "4.2.3", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "7.1.0", features = ["axum"] }
+vibe_core = { path = "../core" }
+toml = "0.8.10"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+openssl = { version = "0.10.63", features = ["vendored"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+vibe_core = { path = "../core", features = ["coreml", "metal"] }
+
+[features]
+cuda = ["vibe_core/cuda"]
+coreml = ["vibe_core/coreml"]
+metal = ["vibe_core/metal"]
+openblas = ["vibe_core/openblas"]
+rocm = ["vibe_core/rocm"]
+vulkan = ["vibe_core/vulkan"]

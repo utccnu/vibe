@@ -1,15 +1,18 @@
 use axum::{
     routing::{get, post},
     Router,
+    response::IntoResponse,
 };
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 
 mod server;
 mod config;
-mod cmd;
 mod setup;
-mod utils;
+
+async fn hello_world() -> impl IntoResponse {
+    "Hello, World!"
+}
 
 #[tokio::main]
 async fn main() {
@@ -22,8 +25,9 @@ async fn main() {
     // Initialize the model context
     let model_context = setup::ModelContext::new().expect("Failed to initialize model context");
 
-    // Build our application with a route
+    // Build our application with routes
     let app = Router::new()
+        .route("/", get(hello_world))
         .route("/transcribe", post(server::transcribe))
         .route("/load", post(server::load))
         .route("/list", get(server::list_models))

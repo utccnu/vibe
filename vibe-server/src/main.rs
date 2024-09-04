@@ -1,41 +1,20 @@
 use axum::{
-    routing::{get, post},
+    routing::get,
     Router,
-    response::IntoResponse,
 };
 use std::net::SocketAddr;
-use tower_http::cors::CorsLayer;
-
-mod server;
-mod config;
-mod setup;
-
-async fn hello_world() -> impl IntoResponse {
-    "Hello, World!"
-}
 
 #[tokio::main]
 async fn main() {
-    // Initialize logging
+    // initialize tracing
     tracing_subscriber::fmt::init();
 
-    // Load configuration
-    let config = config::load_config().expect("Failed to load configuration");
-
-    // Initialize the model context
-    let model_context = setup::ModelContext::new().expect("Failed to initialize model context");
-
-    // Build our application with routes
+    // build our application with a route
     let app = Router::new()
-        .route("/", get(hello_world))
-        .route("/transcribe", post(server::transcribe))
-        .route("/load", post(server::load))
-        .route("/list", get(server::list_models))
-        .layer(CorsLayer::permissive())
-        .with_state(model_context);
+        .route("/", get(|| async { "Hello, World!" }));
 
-    // Run our application
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
+    // run our app with hyper
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::info!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())

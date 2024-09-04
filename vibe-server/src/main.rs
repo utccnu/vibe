@@ -1,6 +1,7 @@
 use axum::{
     routing::get,
     Router,
+    Server,
 };
 use std::net::SocketAddr;
 
@@ -16,7 +17,7 @@ async fn main() {
     // run our app with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::info!("listening on {}", addr);
-    axum::Server::bind(&addr)
+    Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();

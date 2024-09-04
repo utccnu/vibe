@@ -10,7 +10,7 @@ use eyre::{Result, eyre};
 
 #[derive(Deserialize, Default)]
 pub struct TranscribeModuleOptions {
-    pub core_options: TranscribeOptions,
+    pub core_options: Option<TranscribeOptions>,
     #[serde(default)]
     pub diarize: Option<bool>,
     pub max_speakers: Option<usize>,
@@ -48,7 +48,7 @@ pub struct Segment {
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct TranscribeModuleOptions {
     #[serde(flatten)]
-    pub core_options: TranscribeOptions,
+    pub core_options: Option<TranscribeOptions>,
     pub diarize: Option<bool>,
     pub max_speakers: Option<usize>,
     pub speaker_recognition_threshold: Option<f32>,
@@ -59,7 +59,7 @@ pub struct TranscribeModuleOptions {
 impl Default for TranscribeModuleOptions {
     fn default() -> Self {
         Self {
-            core_options: Default::default(),
+            core_options: None,
             diarize: Some(false),
             max_speakers: Some(2),
             speaker_recognition_threshold: Some(0.5),
@@ -271,7 +271,7 @@ async fn perform_transcription(
     let ctx = whisper_context.as_ref().ok_or_else(|| eyre!("Whisper context not initialized"))?;
 
     // If the context is not initialized with the correct model, initialize it
-    if ctx.model_path().unwrap_or_default() != model_path {
+    if ctx.model_path() != model_path {
         *whisper_context = Some(transcribe::create_context(&model_path, None)?);
     }
 

@@ -2,7 +2,7 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Deserialize, Serialize, ToSchema, Clone)]
+#[derive(Deserialize, Serialize, ToSchema, Clone, Default)]
 pub struct TranscribeOptions {
     pub path: String,
     pub lang: Option<String>,
@@ -15,6 +15,23 @@ pub struct TranscribeOptions {
     pub max_text_ctx: Option<i32>,
     pub word_timestamps: Option<bool>,
     pub max_sentence_len: Option<i32>,
+}
+
+impl Default for TranscribeOptions {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+            lang: None,
+            verbose: None,
+            n_threads: None,
+            init_prompt: None,
+            temperature: None,
+            translate: None,
+            max_text_ctx: None,
+            word_timestamps: None,
+            max_sentence_len: None,
+        }
+    }
 }
 
 impl fmt::Debug for TranscribeOptions {

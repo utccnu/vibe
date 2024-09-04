@@ -1,32 +1,28 @@
-use axum::{
-    extract::{State, Multipart},
-    response::Json,
-    extract::{State, Multipart, Json},
-    response::IntoResponse,
-};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use axum::{extract::State, response::Json, extract::{Multipart, Json}, response::IntoResponse};
+use serde::{Deserialize, Serialize};
 use crate::setup::ModelContext;
 use tokio::sync::mpsc;
-use std::path::PathBuf;
+use std::{path::PathBuf, fs};
 use uuid::Uuid;
-use vibe_core::{
-    config::TranscribeOptions,
-    transcribe,
-};
-use crate::config::VADParameters;
+use vibe_core::{config::TranscribeOptions, transcribe};
+use crate::config::{VADParameters, TranscribeModuleConfig};
 use eyre::{Result, eyre};
 
 #[derive(Deserialize, Default)]
-pub struct TranscribeRequest {
-    #[serde(flatten)]
+pub struct TranscribeModuleOptions {
     pub core_options: TranscribeOptions,
     #[serde(default)]
-    // Additional options specific to vibe-server
     pub diarize: Option<bool>,
     pub max_speakers: Option<usize>,
     pub speaker_recognition_threshold: Option<f32>,
     pub vad_filter: Option<bool>,
     pub vad_parameters: Option<VADParameters>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct TranscribeRequest {
+    #[serde(flatten)]
+    pub module_options: TranscribeModuleOptions,
 }
 
 #[derive(Serialize, Clone)]
@@ -86,6 +82,7 @@ pub async fn transcribe(
     // Initialize module options with values from the config file
     let mut module_options = TranscribeModuleOptions {
         core_options: TranscribeOptions {
+            path: "".to_string(), // This will be set later
             lang: context.transcribe_config.language.clone(),
             init_prompt: context.transcribe_config.initial_prompt.clone(),
             translate: Some(context.transcribe_config.translate),
@@ -130,7 +127,7 @@ pub async fn transcribe(
     }
 
     let file_path = file_path.unwrap();
-    let task_options: TranscribeRequest = task_options.unwrap_or(TranscribeRequest::default());
+    let task_options: TranscribeRequest = task_options.unwrap_or_default();
 
     // Get the model path
     let model_path = match context.model_config.mappings.get(&model_name) {
@@ -155,7 +152,7 @@ pub async fn transcribe(
 
     // Spawn a new task to perform the transcription asynchronously
     tokio::spawn(async move {
-        let result = perform_transcription(file_path, model_path, task_options, module_options, tx, context_clone).await;
+        let result = perform_transcription(file_path, model_path, task_options.module_options, module_options, tx, context_clone).await;
         match result {
             Ok(transcription) => {
                 context.results.lock().await.insert(job_id.clone(), transcription);
@@ -265,8 +262,8 @@ pub struct LoadModelRequest {
 async fn perform_transcription(
     file_path: PathBuf,
     model_path: PathBuf,
-    task_options: TranscribeRequest,
-    module_options: TranscribeModuleOptions,
+    task_options: TranscribeModuleOptions,
+    mut module_options: TranscribeModuleOptions,
     progress_tx: mpsc::Sender<f32>,
     context: ModelContext,
 ) -> Result<TranscriptionResult> {
@@ -278,15 +275,17 @@ async fn perform_transcription(
         *whisper_context = Some(transcribe::create_context(&model_path, None)?);
     }
 
-    let mut core_options = module_options.core_options;
-    // Override core options with task-specific options if provided
+    // Override module options with task-specific options if provided
     if let Some(lang) = task_options.core_options.lang {
-        core_options.lang = Some(lang);
+        module_options.core_options.lang = Some(lang);
     }
     if let Some(init_prompt) = task_options.core_options.init_prompt {
-        core_options.init_prompt = Some(init_prompt);
+        module_options.core_options.init_prompt = Some(init_prompt);
     }
     // ... (apply other overrides as needed)
+
+    // Set the file path in the core options
+    module_options.core_options.path = file_path.to_str().unwrap().to_string();
 
     let progress_callback = move |progress: i32| {
         let _ = progress_tx.try_send(progress as f32 / 100.0);
@@ -297,7 +296,7 @@ async fn perform_transcription(
 
     let transcript = transcribe::transcribe(
         ctx,
-        &core_options,
+        &module_options.core_options,
         Some(Box::new(progress_callback)),
         None, // diarize_options
         None, // vad_options
@@ -307,8 +306,8 @@ async fn perform_transcription(
     let result = TranscriptionResult {
         text: transcript.segments.iter().map(|s| s.text.clone()).collect::<Vec<_>>().join(" "),
         segments: transcript.segments.into_iter().map(|s| Segment {
-            start: s.start,
-            end: s.stop,
+            start: s.start as f32 / 100.0,
+            end: s.stop as f32 / 100.0,
             text: s.text,
             speaker: s.speaker.map(|s| format!("Speaker {}", s)),
         }).collect(),
